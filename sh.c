@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include<dirent.h>
 
 // Simplifed xv6 shell.
 
@@ -38,6 +39,33 @@ struct pipecmd {
 
 int fork1(void);  // Fork but exits on failure.
 struct cmd *parsecmd(char*);
+char* searchpath(char *cmd)
+{
+    DIR *d;
+    struct dirent *dir;
+    char *paths = getenv("PATH");
+    char *path_dir = strtok(paths, ":");
+    while(path_dir != NULL){
+        d = opendir(path_dir);
+        if(d == NULL){
+            fprintf(stderr, "can not open dir: %s", strerror(0));
+
+        }
+        else{
+            while((dir = readdir(d)) != NULL){
+                if(strcmp(dir->d_name, cmd) == 0){
+                    char *final_path = malloc(strlen(path_dir) + strlen(cmd) + 2);
+                    final_path = strcat(final_path, path_dir);
+                    final_path = strcat(final_path, "/");
+                    final_path = strcat(final_path, cmd);
+                    return final_path;
+                }
+            }
+        }
+        path_dir = strtok(NULL, ":");
+    }
+    return cmd;
+}
 
 // Execute cmd.  Never returns.
 void
@@ -60,9 +88,11 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(0);
-    fprintf(stderr, "exec not implemented\n");
+    //fprintf(stderr, "exec not implemented\n");
     // Your code here ...
-    break;
+    execv(searchpath(ecmd->argv[0]), ecmd->argv);
+   fprintf(stderr,"exev returned with error:%s\n", strerror(0));
+      break;
 
   case '>':
   case '<':
@@ -110,9 +140,9 @@ main(void)
         fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     }
-    if(fork1() == 0)
+//    if(fork1() == 0)
       runcmd(parsecmd(buf));
-    wait(&r);
+//    wait(&r);
   }
   exit(0);
 }
@@ -209,6 +239,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
   return ret;
 }
 
+//find the first char that is in toks
 int
 peek(char **ps, char *es, char *toks)
 {
@@ -306,8 +337,8 @@ parseexec(char **ps, char *es)
   int tok, argc;
   struct execcmd *cmd;
   struct cmd *ret;
-  
-  ret = execcmd();
+
+  ret = execcmd(); // allocate a new cmd,memory of cmd
   cmd = (struct execcmd*)ret;
 
   argc = 0;
