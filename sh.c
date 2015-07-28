@@ -75,6 +75,7 @@ runcmd(struct cmd *cmd)
   struct execcmd *ecmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
+  int fd;
 
   if(cmd == 0)
     exit(0);
@@ -91,14 +92,31 @@ runcmd(struct cmd *cmd)
     //fprintf(stderr, "exec not implemented\n");
     // Your code here ...
     execv(searchpath(ecmd->argv[0]), ecmd->argv);
-   fprintf(stderr,"exev returned with error:%s\n", strerror(0));
+    fprintf(stderr,"exev returned with error:%s\n", strerror(0));
       break;
 
   case '>':
+      rcmd = (struct redircmd*)cmd;
+      //fprintf(stderr, "redir not implemented\n");
+      // Your code here ...
+      fd = open(rcmd->file, rcmd->mode);
+      if(fd < 0){
+          fprintf(stderr, "file open error:%s\n", strerror(0));
+          break;
+      }
+      dup2(fd, STDOUT_FILENO);
+      runcmd(rcmd->cmd);
+      break;
   case '<':
     rcmd = (struct redircmd*)cmd;
-    fprintf(stderr, "redir not implemented\n");
+    //fprintf(stderr, "redir not implemented\n");
     // Your code here ...
+    fd= open(rcmd->file, rcmd->mode);
+    if(fd< 0){
+        fprintf(stderr, "file open error:%s\n", strerror(0));
+        break;
+    }
+    dup2(fd, STDIN_FILENO);
     runcmd(rcmd->cmd);
     break;
 
@@ -140,9 +158,9 @@ main(void)
         fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     }
-//    if(fork1() == 0)
+   if(fork1() == 0)
       runcmd(parsecmd(buf));
-//    wait(&r);
+    wait(&r);
   }
   exit(0);
 }
