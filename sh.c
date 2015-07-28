@@ -122,8 +122,38 @@ runcmd(struct cmd *cmd)
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    fprintf(stderr, "pipe not implemented\n");
+   //fprintf(stderr, "pipe not implemented\n");
     // Your code here ...
+    int pipefd[2], result;
+    result = pipe(pipefd);
+    if(result < 0){
+        fprintf(stderr, "can not pipe", strerror(0));
+        break;
+    }
+    pid_t lp, rp;
+    if(!(lp = fork1())){
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        runcmd(pcmd->left);
+        close(pipefd[1]);
+        fprintf(stderr, "can not pipe1\n", strerror(0));
+        exit(0);
+    }
+
+    if(!(rp = fork1())){
+        close(pipefd[1]);
+        dup2(pipefd[0], STDIN_FILENO);
+        runcmd(pcmd->right);
+        close(pipefd[0]);
+        fprintf(stderr, "can not pipe2\n", strerror(0));
+        exit(0);
+    }
+    close(pipefd[1]);
+    close(pipefd[0]);
+    wait(&lp);
+    wait(&rp);
+
+
     break;
   }    
   exit(0);
